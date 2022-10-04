@@ -1,13 +1,27 @@
 <h1>福井県観光アンケートコメントマップ</h1>
+
+<main>
+<select id="selarea"></select><br>
 <div id="divmap"></div>
 <div id="filter"></div>
+</main>
+
 <a href=https://www.fuku-e.com/feature/detail_266.html>福井県観光データ分析システム「FTAS (FUKUI Tourism data Analizing System)」</a>の<a href=https://github.com/code4fukui/fukui-kanko-survey/>HAPPINESSキャンペーンアンケートオープンデータ</a>を加工して使用。<a href=https://github.com/coffeepot74/sightseeingApp>src on GitHub</a><br>
 
 <script type="module">
 import { LeafletGSI } from "https://js.sabae.cc/LeafletGSI.js";
 import { CSV } from "https://js.sabae.cc/CSV.js";
 const map = await LeafletGSI.initMap("divmap");
-map.setView([35.943, 136.19], 13);
+
+if (location.hash.length > 1) {
+    const n = location.hash.substring(1).split(",");
+    if (n.length >= 3) {
+        map.setView([n[1], n[2]], n[0]);
+    }
+} else {
+    map.setView([35.943, 136.19], 13);
+}
+
 const url = "https://code4fukui.github.io/fukui-kanko-survey/area.csv"
 const area = CSV.toJSON(await CSV.fetch(url));
 console.log(area);
@@ -75,6 +89,22 @@ for (const s of SAT) {
     i++;
 }
 
+map.on("move", () => {
+    const zoom = map.getZoom();
+    const pos = map.getCenter();
+    location.hash = zoom + "," + pos.lat.toFixed(6) + "," + pos.lng.toFixed(6);
+});
+
+console.log(area)
+for (const a of area) {
+    const opt = document.createElement("option");
+    opt.textContent = a.エリア名;
+    selarea.appendChild(opt);
+}
+selarea.onchange = () => {
+    const a = area.find(a => a.エリア名 == selarea.value);
+    map.setView([a.緯度, a.経度], 15);
+};
 
 </script>
 <style>
