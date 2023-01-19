@@ -1,121 +1,158 @@
-<h1>福井県観光アンケートコメントマップ</h1>
-
-<main>
-<select id="selarea"></select><br>
-<div id="divmap"></div>
-<div id="filter"></div>
-</main>
-
-<a href=https://www.fuku-e.com/feature/detail_266.html>福井県観光データ分析システム「FTAS (FUKUI Tourism data Analizing System)」</a>の<a href=https://github.com/code4fukui/fukui-kanko-survey/>HAPPINESSキャンペーンアンケートオープンデータ</a>を加工して使用。<a href=https://github.com/coffeepot74/sightseeingApp>src on GitHub</a><br>
-
-<script type="module">
-import { LeafletGSI } from "https://js.sabae.cc/LeafletGSI.js";
-import { CSV } from "https://js.sabae.cc/CSV.js";
-import {} from "https://code4fukui.github.io/fukui-kanko-stat/header.js";
-
-const map = await LeafletGSI.initMap("divmap");
-
-if (location.hash.length > 1) {
-    const n = location.hash.substring(1).split(",");
-    if (n.length >= 3) {
-        map.setView([n[1], n[2]], n[0]);
-    }
-} else {
-    map.setView([35.943, 136.19], 13);
-}
-
-const url = "https://code4fukui.github.io/fukui-kanko-survey/area.csv"
-const area = CSV.toJSON(await CSV.fetch(url));
-console.log(area);
-const urldata = "https://code4fukui.github.io/fukui-kanko-survey/all.csv";
-const data = CSV.toJSON(await CSV.fetch(urldata));
-console.log(data);
-
-const SAT = ["とても満足", "満足", "どちらでもない", "不満", "とても不満"];
-data.forEach(d => {
-    const n = SAT.indexOf(d.満足度);
-    if (n < 0) {
-        throw new Error(d.満足度);
-    }
-    d.sat = n;
-    d.color = ["blue", "blue", "yellow", "red", "red"][n];
-});
-const layers = [];
-for (let i = 0; i < SAT.length; i++) {
-    const layer = L.layerGroup();
-    layers.push(layer);
-    layer.addTo(map);
-}
-
-for(const d of data){
-    const a = area.find(a => d.回答エリア == a.エリア名);
-    // console.log(a);
-    const r = 0.01;
-    const marker = L.marker([parseFloat(a.緯度) + Math.random()*r*2-r, parseFloat(a.経度) + Math.random()*r*2-r], 
-        { icon: L.spriteIcon(d.color)});
-    const property = {ansArea: d.回答エリア, livArea: d.会員市町村, age: d.年代, satis: d.満足度の理由, 
-        inconv : d.不便さの内容, trfc_satis: d.福井県内での交通手段の満足度の理由,
-        req_fasi: d.施設に求めるもの, req_fukui: d.福井県に求めるもの};
-    let elements ={}
-    for(const elem in property){
-        if (property[elem]) {
-            elements[elem] = property[elem]
-        } else {
-            elements[elem] = "なし"
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width">
+  <title>福井県観光アンケートコメントマップ</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v7.1.0/ol.css">
+  <script src="https://cdn.jsdelivr.net/npm/ol@v7.1.0/dist/ol.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/geolib@3.3.3/lib/index.min.js"></script>
+</head>
+<body>
+  <h1>福井県観光アンケートコメントマップ</h1>
+  
+  <main>
+    <select id="selarea"></select><br>
+    <div id="olmap" style="width:auto;height:85vh;"></div>
+    <div id="popup" class="ol-popup">
+      <div id="popup-content"></div>
+    </div>
+    <div id="filter"></div>
+  </main>
+  
+  <a href=https://www.fuku-e.com/feature/detail_266.html>福井県観光データ分析システム「FTAS (FUKUI Tourism data Analizing System)」</a>の<a href=https://github.com/code4fukui/fukui-kanko-survey/>HAPPINESSキャンペーンアンケートオープンデータ</a>を加工して使用。<a href=https://github.com/coffeepot74/sightseeingApp>src on GitHub</a><br>
+  <p><a target="_blank" href="https://icons8.com/icon/OBmVbH2qOGwK/%E3%83%9E%E3%83%BC%E3%82%AB%E3%83%BC">マーカー</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a></p>
+  
+  <script type="module">
+    import { OLMap } from "https://eiichimiyagawa.github.io/OLMap/v1/OLMap.js";
+    import { CSV } from "https://js.sabae.cc/CSV.js";
+    import {} from "https://code4fukui.github.io/fukui-kanko-stat/header.js";
+    
+    // iOS14以前に関する対応（top-level await未対応のため）
+    addEventListener("load", async () => {
+      const SAT = {
+        "とても満足": {
+          color: "blue"
+        },
+        "満足": {
+          color: "blue"
+        },
+        "どちらでもない": {
+          color: "yellow"
+        },
+        "不満": {
+          color: "red"
+        },
+        "とても不満": {
+          color: "red"
         }
-    }
-    marker.bindPopup(`日時: ${d.回答日時}<br><br> エリア: ${elements.ansArea} <br><br> 旅行者情報: ${elements.livArea}, ${elements.age} <br><br> 満足・不満足: ${d.満足度} - ${elements.satis} <br><br> 不便さ: ${elements.inconv} <br><br> 交通手段について: ${elements.trfc_satis}
-        <br><br> 施設へのコメント: ${elements.req_fasi} <br><br> 福井へのコメント: ${elements.req_fukui}`)
-    layers[d.sat].addLayer(marker);
-}
-
-let i = 0;
-for (const s of SAT) {
-    const label = document.createElement("label");
-    const inp = document.createElement("input");
-    inp.type = "checkbox";
-    inp.checked = true;
-    inp.sat = i;
-    const span = document.createElement("span");
-    span.textContent = s;
-    label.appendChild(inp);
-    label.appendChild(span);
-    filter.appendChild(label);
-    inp.onclick = () => {
-        if (inp.checked) {
-            map.addLayer(layers[inp.sat]);
-        } else {
-            map.removeLayer(layers[inp.sat]);
-        }
-    };
-    i++;
-}
-
-map.on("move", () => {
-    const zoom = map.getZoom();
-    const pos = map.getCenter();
-    location.hash = zoom + "," + pos.lat.toFixed(6) + "," + pos.lng.toFixed(6);
-});
-
-console.log(area)
-for (const a of area) {
-    const opt = document.createElement("option");
-    opt.textContent = a.エリア名;
-    selarea.appendChild(opt);
-}
-selarea.onchange = () => {
-    const a = area.find(a => a.エリア名 == selarea.value);
-    map.setView([a.緯度, a.経度], 15);
-};
-
-</script>
-<style>
-    #divmap {
-        height: 85vh;
-        width: 100%;
-    }
+      };
+      
+      const map = new OLMap({
+        zoom: 9,
+      });
+      
+      const url = "https://code4fukui.github.io/fukui-kanko-survey/area.csv"
+      const area = CSV.toJSON(await CSV.fetch(url));
+      const urldata = "https://code4fukui.github.io/fukui-kanko-survey/all.csv";
+      const data = CSV.toJSON(await CSV.fetch(urldata));
+      
+      map.addVectorLayer("marker");
+      const layer = map.getLayer("marker");
+      
+      const r = 0.01;
+      data.forEach((d, index) => {
+        const a = area.find(a => d.回答エリア == a.エリア名);
+        map.addMarker(layer, {
+          longitude: Number(a["経度"]) + Math.random()*r*2-r,
+          latitude: Number(a["緯度"]) + Math.random()*r*2-r,
+          content: `<span class="title">日時:</span> ${d.回答日時}<br><br><span class="title">エリア:</span> ${d.回答エリア} <br><br><span class="title">旅行者情報:</span> ${d.会員市町村}, ${d.年代} <br><br><span class="title">満足・不満足:</span> ${d.満足度} - ${d.満足度の理由} <br><br><span class="title">不便さ:</span> ${d.不便さの内容} <br><br><span class="title">交通手段について:</span> ${d.福井県内での交通手段の満足度の理由}
+          <br><br><span class="title">施設へのコメント:</span> ${d.施設に求めるもの} <br><br><span class="title">福井へのコメント:</span> ${d.福井県に求めるもの}`,
+          icon: `./image/icon_${SAT[d.満足度].color}.png`,
+          tag: d.満足度
+        });
+        
+      });
+      
+      Object.keys(SAT).forEach((s) => {
+        const label = document.createElement("label");
+        const inp = document.createElement("input");
+        inp.type = "checkbox";
+        inp.checked = true;
+        inp.sat = s;
+        const span = document.createElement("span");
+        span.textContent = s;
+        label.appendChild(inp);
+        label.appendChild(span);
+        filter.appendChild(label);
+        inp.onclick = (event) => {
+          layer.getSource().getFeatures().forEach((feature) => {
+            if (feature.get("tag") !== event.target.sat) {
+              return;
+            }
+            
+            const opacity = event.target.checked ? 1.0 : 0.0;
+            feature.getStyle().getImage().setOpacity(opacity); 
+          });
+          layer.changed();
+        };
+      });
+      
+      for (const a of area) {
+        const opt = document.createElement("option");
+        opt.textContent = a.エリア名;
+        selarea.appendChild(opt);
+      }
+      
+      selarea.onchange = () => {
+        const a = area.find(a => a.エリア名 == selarea.value);
+        map.setCenter(map.transform(a.経度, a.緯度));
+        map.setZoom(15);
+      };
+    });
+  </script>
+  
+  <style>
     #filter {
-        text-align: center;
-        margin: .2em 0 .8em 0;
+      text-align: center;
+      margin: .2em 0 .8em 0;
     }
-</style>
+    
+    .title {
+      font-weight: bold;
+    }
+    
+    .ol-popup {
+      position: absolute;
+      background-color: white;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+      padding: 15px;
+      border-radius: 10px;
+      border: 1px solid #cccccc;
+      bottom: 12px;
+      left: -50px;
+      min-width: 480px;
+    }
+    .ol-popup:after, .ol-popup:before {
+      top: 100%;
+      border: solid transparent;
+      content: " ";
+      height: 0;
+      width: 0;
+      position: absolute;
+      pointer-events: none;
+    }
+    .ol-popup:after {
+      border-top-color: white;
+      border-width: 10px;
+      left: 48px;
+      margin-left: -10px;
+    }
+    .ol-popup:before {
+      border-top-color: #cccccc;
+      border-width: 11px;
+      left: 48px;
+      margin-left: -11px;
+    }
+  </style>
+</body>
+</html>
