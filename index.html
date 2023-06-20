@@ -56,17 +56,29 @@
       const urldata = "https://code4fukui.github.io/fukui-kanko-survey/all.csv";
       const data = CSV.toJSON(await CSV.fetch(urldata));
       
+      console.log(area);
+
       map.addVectorLayer("marker");
       const layer = map.getLayer("marker");
       
       const r = 0.01;
       data.forEach((d, index) => {
-        const a = area.find(a => d.回答エリア == a.エリア名);
+        const a = area.find(a => d.回答エリア == a.エリア名 || d.回答エリア == a.旧エリア名);
+        if (!a) {
+          console.log(d.回答エリア + " is not found in area");
+          return;
+        }
         map.addMarker(layer, {
           longitude: Number(a["経度"]) + Math.random()*r*2-r,
           latitude: Number(a["緯度"]) + Math.random()*r*2-r,
-          content: `<span class="title">日時:</span> ${d.回答日時}<br><br><span class="title">エリア:</span> ${d.回答エリア} <br><br><span class="title">旅行者情報:</span> ${d.会員市町村}, ${d.年代} <br><br><span class="title">満足・不満足:</span> ${d.満足度} - ${d.満足度の理由} <br><br><span class="title">不便さ:</span> ${d.不便さの内容} <br><br><span class="title">交通手段について:</span> ${d.福井県内での交通手段の満足度の理由}
-          <br><br><span class="title">施設へのコメント:</span> ${d.施設に求めるもの} <br><br><span class="title">福井へのコメント:</span> ${d.福井県に求めるもの}`,
+          content: `<span class="title">日時:</span> ${d.回答日時}<br><br>
+            <span class="title">エリア:</span> ${d.回答エリア} <br><br>
+            <span class="title">旅行者情報:</span> ${d.会員市町村}, ${d.年代} <br><br>
+            <span class="title">満足・不満足:</span> ${d.満足度} - ${d.満足度の理由} <br><br>
+            <span class="title">不便さ:</span> ${d.不便さの内容} <br><br>
+            <span class="title">交通手段について:</span> ${d.福井県内での交通手段の満足度の理由}<br><br>
+            <span class="title">施設へのコメント:</span> ${d.施設に求めるもの} <br><br>
+            <span class="title">福井へのコメント:</span> ${d.福井県に求めるもの}`,
           icon: `./image/icon_${SAT[d.満足度].color}.png`,
           tag: d.満足度
         });
