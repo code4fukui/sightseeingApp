@@ -61,16 +61,25 @@
       map.addVectorLayer("marker");
       const layer = map.getLayer("marker");
       
-      const r = 0.01;
+      const r = 0.015;
       data.forEach((d, index) => {
         const a = area.find(a => d.回答エリア == a.エリア名 || d.回答エリア == a.旧エリア名);
         if (!a) {
           console.log(d.回答エリア + " is not found in area");
           return;
         }
+        const [x, y] = (() => {
+          for (;;) {
+            const x = Math.random() * r * 2 - r;
+            const y = Math.random() * r * 2 - r;
+            if (x * x + y * y < r * r) {
+              return [x, y];
+            }
+          }
+        })();
         map.addMarker(layer, {
-          longitude: Number(a["経度"]) + Math.random()*r*2-r,
-          latitude: Number(a["緯度"]) + Math.random()*r*2-r,
+          longitude: Number(a["経度"]) + y,
+          latitude: Number(a["緯度"]) + x,
           content: `<span class="title">日時:</span> ${d.回答日時}<br><br>
             <span class="title">エリア:</span> ${d.回答エリア} <br><br>
             <span class="title">旅行者情報:</span> ${d.会員市町村}, ${d.年代} <br><br>
